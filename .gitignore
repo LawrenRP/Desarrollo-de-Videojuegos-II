@@ -1,0 +1,80 @@
+# Esta plantilla de .gitignore se enfoca en ignorar archivos grandes, temporales
+# y generados automáticamente por Unity o tu editor de código.
+
+# **********************************************
+# 1. CARPETAS Y ARCHIVOS PRINCIPALES DE UNITY A IGNORAR
+# **********************************************
+
+# Carpetas generadas automáticamente que contienen datos locales o de compilación.
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[L]ogs/
+/[I]nstallers/
+/[P]ackages/
+/[P]ackageCache/
+
+# Archivos de configuración de Project Settings que son generados localmente
+# o que no deben compartirse a menos que sea necesario.
+/[Pp]roject[Ss]ettings/ProjectVersion.txt
+
+# Configuración de pruebas (Test Runner)
+/[Tt]est[Rr]esults/
+
+# Archivos de caché del motor
+/[Mm]etadata/
+
+# **********************************************
+# 2. ARCHIVOS DE PAQUETES (BUILDS)
+# **********************************************
+
+# Ignora todos los paquetes (builds) generados
+*.apk
+*.aab
+*.unitypackage
+*.xcode
+*.ipa
+*.exe
+*.dll
+*.pdb
+*.suo
+
+# **********************************************
+# 3. ARCHIVOS DE VISUAL STUDIO / MONODEVELOP / RIDER
+# **********************************************
+
+# Archivos de solución y proyecto de Visual Studio, Rider, etc.
+# Se regeneran fácilmente
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.sln.ide
+*.sln.docstates
+*.ds_store
+
+# VS Code
+.vscode/
+
+# JetBrains Rider
+.idea/
+*.iws
+*.iwp
+*.iws.bak
+/[Aa]ssets/Plugins/Editor/JetBrains/
+
+# **********************************************
+# 4. ARCHIVOS VARIOS
+# **********************************************
+
+# Archivos de Mac OS X (Desktop Services Store)
+.DS_Store
+
+# Archivos de backup o temporales
+*~
+# Archivos de Asset Store Tools
+/[Aa]ssets/AssetStoreTools*
