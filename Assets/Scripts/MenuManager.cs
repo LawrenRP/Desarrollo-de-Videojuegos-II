@@ -9,7 +9,7 @@ public class MenuManager : MonoBehaviour
         // Asegúrate de que el nombre aquí sea EXACTO al de tu escena de juego.
         // He visto en tus archivos que se llama "Crimson Harvest" o "SC Demo Scene - Village Props".
         // Usaré "Crimson Harvest" como ejemplo:
-        SceneManager.LoadScene("Crimson Harvest"); 
+        SceneManager.LoadScene("Crimson Harvest(1-3)"); 
     }
 
     // Esta función cerrará el juego

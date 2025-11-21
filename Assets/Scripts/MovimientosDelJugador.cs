@@ -2,9 +2,24 @@ using UnityEngine;
 
 public class MovimientosDelJugador : MonoBehaviour
 {
+    [Header("Configuración de Movimiento")]
     public float velocidadMovimiento = 5f;
     public float fuerzaSalto = 10f;
     public float maxTiempoSalto = 0.3f;
+
+    [Header("Configuración de Audio")]
+    [SerializeField] private AudioSource sfxAudioSource; // AudioSource principal (Ataques)
+    
+    [Space(10)] // Espacio visual en el inspector
+    [SerializeField] private AudioClip sonidoPasosPasto;
+    [Range(0f, 1f)] public float volumenPasos = 0.5f; // ¡NUEVO! Control de volumen pasos
+
+    [Space(10)]
+    [SerializeField] private AudioClip sonidoAtaque;
+    [Range(0f, 1f)] public float volumenAtaque = 1f; // ¡NUEVO! Control de volumen ataque
+
+    // Fuente de audio secundaria generada por código para los pasos
+    private AudioSource pasosAudioSource; 
 
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
@@ -15,32 +30,50 @@ public class MovimientosDelJugador : MonoBehaviour
     private bool estaEnElSuelo;
     private float tiempoSaltoActual;
     private bool saltando;
-    
-    // NUEVA VARIABLE: Para evitar ataques múltiples rápidos
-    private bool estaAtacando = false; 
+    private bool estaAtacando = false;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
+        
+        // 1. Configurar AudioSource Principal
+        if (sfxAudioSource == null) sfxAudioSource = GetComponent<AudioSource>();
+        
+        // 2. Crear AudioSource Secundario (Pasos)
+        pasosAudioSource = gameObject.AddComponent<AudioSource>();
+        pasosAudioSource.clip = sonidoPasosPasto;
+        pasosAudioSource.loop = true; 
+        pasosAudioSource.playOnAwake = false;
+        pasosAudioSource.volume = volumenPasos; // Asignamos el volumen inicial
+        
+        // Copiar configuración 3D
+        if (sfxAudioSource != null)
+        {
+            pasosAudioSource.spatialBlend = sfxAudioSource.spatialBlend;
+        }
     }
 
     void Update()
     {
+        // Actualizar volumen de pasos en tiempo real (por si lo cambias mientras juegas)
+        if (pasosAudioSource != null)
+        {
+            pasosAudioSource.volume = volumenPasos;
+        }
+
         // === LÓGICA DE SALTO ===
         if (Input.GetKeyDown(KeyCode.Space) && estaEnElSuelo)
         {
             saltando = true;
             tiempoSaltoActual = 0;
-            // Corregido: Usar 'velocity' en lugar de 'linearVelocity'
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, fuerzaSalto);
         }
 
         if (Input.GetKey(KeyCode.Space) && saltando && tiempoSaltoActual < maxTiempoSalto)
         {
             tiempoSaltoActual += Time.deltaTime;
-            // Corregido: Usar 'velocity' en lugar de 'linearVelocity'
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, fuerzaSalto);
         }
 
@@ -49,7 +82,7 @@ public class MovimientosDelJugador : MonoBehaviour
             saltando = false;
         }
 
-        // === NUEVA LÓGICA DE ATAQUE ===
+        // === LÓGICA DE ATAQUE ===
         HandleAttacks();
     }
 
@@ -58,71 +91,76 @@ public class MovimientosDelJugador : MonoBehaviour
         // === LÓGICA DE MOVIMIENTO ===
         float movimientoHorizontal = Input.GetAxis("Horizontal");
 
-        if (movimientoHorizontal > 0)
-        {
-            spriteRenderer.flipX = false;
-        }
-        else if (movimientoHorizontal < 0)
-        {
-            spriteRenderer.flipX = true;
-        }
+        if (movimientoHorizontal > 0) spriteRenderer.flipX = false;
+        else if (movimientoHorizontal < 0) spriteRenderer.flipX = true;
 
-        // Corregido: Usar 'velocity' en lugar de 'linearVelocity'
         rb.linearVelocity = new Vector2(movimientoHorizontal * velocidadMovimiento, rb.linearVelocity.y);
 
-        // === LÓGICA DE SUELO Y ANIMACIONES DE MOVIMIENTO ===
+        // === LÓGICA DE SUELO Y ANIMACIONES ===
         estaEnElSuelo = Physics2D.OverlapCircle(verificadorDeSuelo.position, 0.2f, capaDeSuelo);
 
-        if (!estaEnElSuelo)
+        if (!estaEnElSuelo) // AIRE
         {
             animator.SetBool("Saltar", true);
             animator.SetBool("Caminar", false);
+            StopFootsteps();
         }
-        else
+        else // SUELO
         {
             animator.SetBool("Saltar", false);
             
-            // Corregido: Usar 'velocity' en lugar de 'linearVelocity'
             if (Mathf.Abs(rb.linearVelocity.x) > 0.1f)
             {
                 animator.SetBool("Caminar", true);
+                PlayFootsteps();
             }
             else
             {
                 animator.SetBool("Caminar", false);
+                StopFootsteps();
             }
         }
     }
 
-    // =========================================================================
-    // FUNCIÓN PARA MANEJAR ATAQUES
-    // =========================================================================
+    void PlayFootsteps()
+    {
+        if (pasosAudioSource != null && sonidoPasosPasto != null)
+        {
+            if (!pasosAudioSource.isPlaying)
+            {
+                pasosAudioSource.Play();
+            }
+        }
+    }
+
+    void StopFootsteps()
+    {
+        if (pasosAudioSource != null && pasosAudioSource.isPlaying)
+        {
+            pasosAudioSource.Stop();
+        }
+    }
+
     void HandleAttacks()
     {
-        // Si el jugador presiona la tecla de ataque (ej. 'Z' o 'Mouse0')
         if (Input.GetKeyDown(KeyCode.Z) && !estaAtacando) 
         {
-            estaAtacando = true; // Bloquea nuevos ataques hasta que la animación termine
+            estaAtacando = true; 
 
-            if (estaEnElSuelo)
+            // Reproducir sonido de ataque con el volumen personalizado
+            if(sonidoAtaque != null && sfxAudioSource != null)
             {
-                // Activa el Trigger para el ataque en el suelo
-                animator.SetTrigger("Ataque");
-            }
-            else // Está en el aire
-            {
-                // Activa el Trigger para el ataque aéreo
-                animator.SetTrigger("AtaqueAereo");
+                // PlayOneShot acepta un segundo parámetro: la escala de volumen (0 a 1)
+                sfxAudioSource.PlayOneShot(sonidoAtaque, volumenAtaque);
             }
 
-            // **IMPORTANTE:** Aquí llamamos a la función que desbloquea el ataque.
-            // La retrasamos el tiempo que dure la animación. 
-            // ¡AJUSTA ESTE VALOR SEGÚN LA DURACIÓN REAL DE TU ANIMACIÓN DE ATAQUE!
+            if (estaEnElSuelo) animator.SetTrigger("Ataque");
+            else animator.SetTrigger("AtaqueAereo");
+
             Invoke("FinishAttack", 0.3f); 
         }
     }
 
-    // FUNCIÓN para resetear el bloqueo de ataque. Se llama con 'Invoke'.
     void FinishAttack()
     {
         estaAtacando = false;

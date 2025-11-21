@@ -1,59 +1,90 @@
 using UnityEngine;
-using TMPro; // Necesario para usar TextMeshPro
+using TMPro;
 
 public class RecoleccionDeFrutas : MonoBehaviour
 {
-    // Una variable pública para mostrar el texto de la UI.
+    [Header("Interfaz (UI)")]
     public TextMeshProUGUI textoContador;
 
-    // Un contador para el inventario. Es público para que puedas verlo en el Inspector.
+    [Header("Inventario")]
     public int manzanasEnInventario = 0;
+    public float vidaQueCura = 10f; // Cuánta vida recuperas al comer
 
-    // Start se llama una vez al inicio del juego.
+    [Header("Audio")]
+    public AudioClip sonidoRecoger; // Arrastra el audio de "coin" o "pickup"
+    public AudioClip sonidoComer;   // Arrastra el audio de "mordisco"
+
+    private VidaJugador scriptVida;
+    private AudioSource audioSource;
+
     void Start()
     {
-        // Actualizamos el texto de la UI al inicio.
+        // Obtenemos las referencias automáticamente
+        scriptVida = GetComponent<VidaJugador>();
+        audioSource = GetComponent<AudioSource>();
+
+        if (audioSource == null) // Por si acaso no tienes AudioSource
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
         ActualizarTextoContador();
     }
 
-    // Update se llama en cada fotograma del juego.
     void Update()
     {
-        // === Lógica de Consumo (Tecla 'R') ===
-        // Si el jugador presiona la tecla 'R' y tiene al menos una manzana en el inventario...
-        if (Input.GetKeyDown(KeyCode.R) && manzanasEnInventario > 0)
+        // === COMER MANZANA (Tecla X) ===
+        if (Input.GetKeyDown(KeyCode.X) && manzanasEnInventario > 0)
         {
-            // Reduce el inventario en 1.
-            manzanasEnInventario--;
-            Debug.Log("Manzana comida. Inventario: " + manzanasEnInventario);
-            // Actualiza el texto en la pantalla.
-            ActualizarTextoContador();
+            // 1. Solo comemos si la vida no está llena
+            if (scriptVida.vidaActual < scriptVida.vidaMaxima)
+            {
+                ComerManzana();
+            }
+            else
+            {
+                Debug.Log("¡Vida llena! No es necesario comer.");
+            }
         }
     }
 
-    // Se activa cuando un objeto con un Collider2D entra en el Trigger.
+    void ComerManzana()
+    {
+        manzanasEnInventario--;
+        
+        // Reproducir sonido
+        if (sonidoComer != null) audioSource.PlayOneShot(sonidoComer);
+
+        // Curar al jugador
+        if (scriptVida != null)
+        {
+            scriptVida.Curar(vidaQueCura); 
+        }
+
+        ActualizarTextoContador();
+    }
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        // Revisa si el objeto que colisionó tiene el tag "Fruta".
-        if (collision.gameObject.CompareTag("Fruta"))
+        if (collision.CompareTag("Fruta"))
         {
-            // Aumenta el contador de manzanas.
+            // Recoger manzana
             manzanasEnInventario++;
-            Debug.Log("Manzana recogida. Inventario: " + manzanasEnInventario);
-            // Destruye la manzana para que desaparezca.
+            
+            // Sonido de recolección
+            if (sonidoRecoger != null) audioSource.PlayOneShot(sonidoRecoger);
+
             Destroy(collision.gameObject);
-            // Actualiza el texto en la pantalla.
             ActualizarTextoContador();
         }
     }
 
-    // Función para actualizar el texto en la UI.
     void ActualizarTextoContador()
     {
-        // Si la referencia al texto no es nula, actualizamos el contenido.
         if (textoContador != null)
         {
-            textoContador.text = "Manzanas: " + manzanasEnInventario;
+            // CAMBIO AQUÍ: Solo mostramos el número
+            textoContador.text = manzanasEnInventario.ToString();
         }
     }
 }
