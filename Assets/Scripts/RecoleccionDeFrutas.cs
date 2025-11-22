@@ -8,22 +8,21 @@ public class RecoleccionDeFrutas : MonoBehaviour
 
     [Header("Inventario")]
     public int manzanasEnInventario = 0;
-    public float vidaQueCura = 10f; // Cuánta vida recuperas al comer
+    public float vidaQueCura = 10f; 
 
     [Header("Audio")]
-    public AudioClip sonidoRecoger; // Arrastra el audio de "coin" o "pickup"
-    public AudioClip sonidoComer;   // Arrastra el audio de "mordisco"
+    public AudioClip sonidoRecoger; 
+    public AudioClip sonidoComer;   
 
     private VidaJugador scriptVida;
     private AudioSource audioSource;
 
     void Start()
     {
-        // Obtenemos las referencias automáticamente
         scriptVida = GetComponent<VidaJugador>();
         audioSource = GetComponent<AudioSource>();
 
-        if (audioSource == null) // Por si acaso no tienes AudioSource
+        if (audioSource == null) 
         {
             audioSource = gameObject.AddComponent<AudioSource>();
         }
@@ -33,10 +32,8 @@ public class RecoleccionDeFrutas : MonoBehaviour
 
     void Update()
     {
-        // === COMER MANZANA (Tecla X) ===
         if (Input.GetKeyDown(KeyCode.X) && manzanasEnInventario > 0)
         {
-            // 1. Solo comemos si la vida no está llena
             if (scriptVida.vidaActual < scriptVida.vidaMaxima)
             {
                 ComerManzana();
@@ -50,15 +47,19 @@ public class RecoleccionDeFrutas : MonoBehaviour
 
     void ComerManzana()
     {
-        manzanasEnInventario--;
+        manzanasEnInventario--; 
         
-        // Reproducir sonido
         if (sonidoComer != null) audioSource.PlayOneShot(sonidoComer);
 
-        // Curar al jugador
         if (scriptVida != null)
         {
             scriptVida.Curar(vidaQueCura); 
+        }
+
+        // Avisamos al Manager (pasando el inventario restante)
+        if (LevelManager.Instance != null)
+        {
+            LevelManager.Instance.RegistrarManzanaComida(manzanasEnInventario);
         }
 
         ActualizarTextoContador();
@@ -68,13 +69,29 @@ public class RecoleccionDeFrutas : MonoBehaviour
     {
         if (collision.CompareTag("Fruta"))
         {
-            // Recoger manzana
+            // === SOLUCIÓN DEFINITIVA AL DOBLE CONTEO ===
+            
+            // 1. Verificación de seguridad: Si la fruta ya se apagó, ignoramos este contacto.
+            if (!collision.gameObject.activeSelf) return;
+
+            // 2. APAGAR la fruta INMEDIATAMENTE. 
+            // Esto la elimina del juego instantáneamente para los demás colliders.
+            collision.gameObject.SetActive(false);
+            
+            // ===========================================
+
             manzanasEnInventario++;
             
-            // Sonido de recolección
             if (sonidoRecoger != null) audioSource.PlayOneShot(sonidoRecoger);
 
+            // Destruimos el objeto (Unity lo borrará de la memoria al final del frame)
             Destroy(collision.gameObject);
+
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.RegistrarManzanaRecolectada();
+            }
+
             ActualizarTextoContador();
         }
     }
@@ -83,7 +100,6 @@ public class RecoleccionDeFrutas : MonoBehaviour
     {
         if (textoContador != null)
         {
-            // CAMBIO AQUÍ: Solo mostramos el número
             textoContador.text = manzanasEnInventario.ToString();
         }
     }

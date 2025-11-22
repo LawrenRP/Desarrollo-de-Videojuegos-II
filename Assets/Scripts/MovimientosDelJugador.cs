@@ -5,20 +5,19 @@ public class MovimientosDelJugador : MonoBehaviour
     [Header("Configuración de Movimiento")]
     public float velocidadMovimiento = 5f;
     public float fuerzaSalto = 10f;
-    public float maxTiempoSalto = 0.3f;
+    public float maxTiempoSalto = 0.3f; // Tiempo que puedes mantener el salto
 
     [Header("Configuración de Audio")]
-    [SerializeField] private AudioSource sfxAudioSource; // AudioSource principal (Ataques)
+    [SerializeField] private AudioSource sfxAudioSource; 
     
-    [Space(10)] // Espacio visual en el inspector
+    [Space(10)] 
     [SerializeField] private AudioClip sonidoPasosPasto;
-    [Range(0f, 1f)] public float volumenPasos = 0.5f; // ¡NUEVO! Control de volumen pasos
+    [Range(0f, 1f)] public float volumenPasos = 0.5f; 
 
     [Space(10)]
     [SerializeField] private AudioClip sonidoAtaque;
-    [Range(0f, 1f)] public float volumenAtaque = 1f; // ¡NUEVO! Control de volumen ataque
+    [Range(0f, 1f)] public float volumenAtaque = 1f; 
 
-    // Fuente de audio secundaria generada por código para los pasos
     private AudioSource pasosAudioSource; 
 
     private Rigidbody2D rb;
@@ -28,8 +27,11 @@ public class MovimientosDelJugador : MonoBehaviour
     public LayerMask capaDeSuelo;
 
     private bool estaEnElSuelo;
+    
+    // Variables para el salto variable
     private float tiempoSaltoActual;
     private bool saltando;
+    
     private bool estaAtacando = false;
 
     void Start()
@@ -38,17 +40,14 @@ public class MovimientosDelJugador : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         
-        // 1. Configurar AudioSource Principal
         if (sfxAudioSource == null) sfxAudioSource = GetComponent<AudioSource>();
         
-        // 2. Crear AudioSource Secundario (Pasos)
         pasosAudioSource = gameObject.AddComponent<AudioSource>();
         pasosAudioSource.clip = sonidoPasosPasto;
         pasosAudioSource.loop = true; 
         pasosAudioSource.playOnAwake = false;
-        pasosAudioSource.volume = volumenPasos; // Asignamos el volumen inicial
+        pasosAudioSource.volume = volumenPasos; 
         
-        // Copiar configuración 3D
         if (sfxAudioSource != null)
         {
             pasosAudioSource.spatialBlend = sfxAudioSource.spatialBlend;
@@ -57,27 +56,39 @@ public class MovimientosDelJugador : MonoBehaviour
 
     void Update()
     {
-        // Actualizar volumen de pasos en tiempo real (por si lo cambias mientras juegas)
         if (pasosAudioSource != null)
         {
             pasosAudioSource.volume = volumenPasos;
         }
 
-        // === LÓGICA DE SALTO ===
+        // === LÓGICA DE SALTO (VARIABLE) ===
+        
+        // 1. Inicio del salto
         if (Input.GetKeyDown(KeyCode.Space) && estaEnElSuelo)
         {
             saltando = true;
             tiempoSaltoActual = 0;
+            // Aplicamos fuerza inicial
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, fuerzaSalto);
         }
 
-        if (Input.GetKey(KeyCode.Space) && saltando && tiempoSaltoActual < maxTiempoSalto)
+        // 2. Mantener salto (mientras la tecla sigue presionada y no se acabe el tiempo)
+        if (Input.GetKey(KeyCode.Space) && saltando)
         {
-            tiempoSaltoActual += Time.deltaTime;
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, fuerzaSalto);
+            if (tiempoSaltoActual < maxTiempoSalto)
+            {
+                tiempoSaltoActual += Time.deltaTime;
+                // Mantenemos la velocidad hacia arriba
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, fuerzaSalto);
+            }
+            else
+            {
+                saltando = false;
+            }
         }
 
-        if (Input.GetKeyUp(KeyCode.Space) || tiempoSaltoActual >= maxTiempoSalto)
+        // 3. Soltar salto
+        if (Input.GetKeyUp(KeyCode.Space))
         {
             saltando = false;
         }
@@ -98,6 +109,15 @@ public class MovimientosDelJugador : MonoBehaviour
 
         // === LÓGICA DE SUELO Y ANIMACIONES ===
         estaEnElSuelo = Physics2D.OverlapCircle(verificadorDeSuelo.position, 0.2f, capaDeSuelo);
+
+        // ESTA ES LA PARTE QUE FALTABA PARA TU ANIMACIÓN DE CAÍDA:
+        // Le enviamos al Animator la velocidad vertical (Y).
+        // Si es positiva (> 0) está saltando. Si es negativa (< 0) está cayendo.
+        if (animator != null)
+        {
+            animator.SetFloat("VelocidadVertical", rb.linearVelocity.y);
+            animator.SetBool("EnSuelo", estaEnElSuelo); // Ayuda extra para transiciones
+        }
 
         if (!estaEnElSuelo) // AIRE
         {
@@ -147,10 +167,8 @@ public class MovimientosDelJugador : MonoBehaviour
         {
             estaAtacando = true; 
 
-            // Reproducir sonido de ataque con el volumen personalizado
             if(sonidoAtaque != null && sfxAudioSource != null)
             {
-                // PlayOneShot acepta un segundo parámetro: la escala de volumen (0 a 1)
                 sfxAudioSource.PlayOneShot(sonidoAtaque, volumenAtaque);
             }
 
